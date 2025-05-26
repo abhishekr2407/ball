@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ball Runner - Mountains</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    canvas { background: #87ceeb; display: block; margin: auto; }
+    #scoreDisplay {
+      text-align: center;
+      font-family: sans-serif;
+      font-size: 24px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="scoreDisplay">Score: 0</div>
+  <canvas id="gameCanvas" width="800" height="300"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+
+    let gameSpeed = 6;
+    let score = 0;
+    let gameOver = false;
+    let frame = 0;
+
+    const ball = {
+      x: 50,
+      y: 260,
+      radius: 20,
+      dy: 0,
+      gravity: 0.8,
+      jumpStrength: -12,
+      onGround: true,
+
+      update() {
+        this.y += this.dy;
+        this.dy += this.gravity;
+        if (this.y >= 260) {
+          this.y = 260;
+          this.dy = 0;
+          this.onGround = true;
+        }
+      },
+
+      jump() {
+        if (this.onGround) {
+          this.dy = this.jumpStrength;
+          this.onGround = false;
+        }
+      },
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#3498db';
+        ctx.fill();
+        ctx.closePath();
+      }
+    };
+
+    class Obstacle {
+      constructor() {
+        this.x = canvas.width;
+        this.width = 20 + Math.random() * 30;
+        this.height = 30 + Math.random() * 40;
+        this.y = 300 - this.height;
+        this.speed = gameSpeed;
+      }
+
+      update() {
+        this.x -= this.speed;
+      }
+
+      draw() {
+        ctx.fillStyle = '#d84315';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+      }
+
+      offscreen() {
+        return this.x + this.width < 0;
+      }
+
+      hits(ball) {
+        return (
+          ball.x + ball.radius > this.x &&
+          ball.x - ball.radius < this.x + this.width &&
+          ball.y + ball.radius > this.y
+        );
+      }
+    }
+
+    const obstacles = [];
+
+    function drawMountains() {
+      // Distant Mountains
+      ctx.beginPath();
+      ctx.moveTo(0, 200);
+      ctx.lineTo(150, 100);
+      ctx.lineTo(300, 200);
+      ctx.lineTo(450, 120);
+      ctx.lineTo(600, 200);
+      ctx.lineTo(750, 130);
+      ctx.lineTo(800, 200);
+      ctx.lineTo(800, 300);
+      ctx.lineTo(0, 300);
+      ctx.closePath();
+      ctx.fillStyle = '#a5d6a7';
+      ctx.fill();
+
+      // Closer Mountains
+      ctx.beginPath();
+      ctx.moveTo(0, 250);
+      ctx.lineTo(100, 170);
+      ctx.lineTo(200, 250);
+      ctx.lineTo(300, 180);
+      ctx.lineTo(400, 250);
+      ctx.lineTo(500, 200);
+      ctx.lineTo(600, 250);
+      ctx.lineTo(800, 190);
+      ctx.lineTo(800, 300);
+      ctx.lineTo(0, 300);
+      ctx.closePath();
+      ctx.fillStyle = '#81c784';
+      ctx.fill();
+    }
+
+    function gameLoop() {
+      if (gameOver) return;
+
+      // Sky
+      ctx.fillStyle = '#87ceeb';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Mountains
+      drawMountains();
+
+      // Ground
+      ctx.fillStyle = '#4caf50';
+      ctx.fillRect(0, 280, canvas.width, 20);
+
+      // Ball
+      ball.update();
+      ball.draw();
+
+      // Obstacles
+      if (frame % Math.max(80 - Math.floor(score / 5), 30) === 0) {
+        obstacles.push(new Obstacle());
+      }
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].update();
+        obstacles[i].draw();
+
+        if (obstacles[i].hits(ball)) {
+          gameOver = true;
+          scoreDisplay.innerHTML = `Game Over! Final Score: ${score}. Click to restart.`;
+          return;
+        }
+
+        if (obstacles[i].offscreen()) {
+          obstacles.splice(i, 1);
+          score++;
+          scoreDisplay.innerHTML = `Score: ${score}`;
+        }
+      }
+
+      // Difficulty scaling
+      if (frame % 300 === 0 && gameSpeed < 20) {
+        gameSpeed += 0.5;
+      }
+
+      frame++;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function restartGame() {
+      obstacles.length = 0;
+      score = 0;
+      frame = 0;
+      gameSpeed = 6;
+      ball.y = 260;
+      ball.dy = 0;
+      gameOver = false;
+      scoreDisplay.innerHTML = "Score: 0";
+      gameLoop();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') ball.jump();
+    });
+
+    canvas.addEventListener('click', () => {
+      if (gameOver) restartGame();
+    });
+
+    gameLoop();
+  </script>
+</body>
+</html>
